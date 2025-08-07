@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: pgSql
+    environment:
+      POSTGRES_PASSWORD: pgPass1234
+      POSTGRES_USER: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - tms-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Services/AuthService/AuthService_Dockerfile
+    container_name: auth-service
+    env_file:
+      - .env
+      - credentials.env
+    networks:
+      - tms-network
+    depends_on:
+      - postgres
+
+  task-service:
+    build:
+      context: .
+      dockerfile: Services/TaskService/TaskService_Dockerfile
+    container_name: task-service
+    env_file:
+      - .env
+    networks:
+      - tms-network
+    depends_on:
+      - postgres
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Services/NotificationService/NotificationService_Dockerfile
+    container_name: notification-service
+    env_file:
+      - .env
+    networks:
+      - tms-network
+    depends_on:
+      - postgres
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Services/Gateway/Gateway_Dockerfile
+    container_name: gateway
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env
+      - credentials.env
+    networks:
+      - tms-network
+    depends_on:
+      - auth-service
+      - task-service
+      - notification-service
+
+volumes:
+  pgdata:
+
+networks:
+  tms-network:
+    driver: bridge
